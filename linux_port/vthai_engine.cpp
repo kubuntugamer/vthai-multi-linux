@@ -60,11 +60,43 @@ void render_string_to_grid(const std::vector<uint8_t>& input_stream, std::vector
 bool load_input_file_stream(const std::string& filepath, std::vector<uint8_t>& out_stream) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file.is_open()) return false;
-    
-    // Read raw file buffer bytes into the storage array vector
     char ch;
-    while (file.get(ch)) {
-        out_stream.push_back(static_cast<uint8_t>(ch));
-    }
+    while (file.get(ch)) out_stream.push_back(static_cast<uint8_t>(ch));
     return true;
+}
+
+void process_stream_to_buffer(const std::vector<uint8_t>& stream, VThaiScreenBuffer& buffer) {
+    uint16_t row = 0;
+    std::vector<uint8_t> current_line_stream;
+
+    // Helper lambda function to commit a line segment into the grid layout rows
+    auto commit_current_line = [&](const std::vector<uint8_t>& line_data) {
+        if (row >= buffer.max_rows) return;
+        render_string_to_grid(line_data, buffer.grid[row]);
+        // Cap the allocated boundary row width limit to max columns
+        if (buffer.grid[row].size() > buffer.max_cols) {
+            buffer.grid[row].resize(buffer.max_cols);
+        }
+        row++;
+    };
+
+    for (uint8_t b : stream) {
+        // Intercept standard newline control codes to drop layout rows down
+        if (b == 0x0A || b == 0x0D) {
+            if (!current_line_stream.empty()) {
+                commit_current_line(current_line_stream);
+                current_line_stream.clear();
+            }
+        } else {
+            current_line_stream.push_back(b);
+            // Auto wrap line if horizontal limit is exceeded
+            if (current_line_stream.size() >= buffer.max_cols) {
+                commit_current_line(current_line_stream);
+                current_line_stream.clear();
+            }
+        }
+    }
+    if (!current_line_stream.empty()) {
+        commit_current_line(current_line_stream);
+    }
 }
