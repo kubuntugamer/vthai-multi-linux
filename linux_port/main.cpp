@@ -25,7 +25,9 @@ void run_phase1_test() {
 void run_phase2_test() {
     std::cout << "\n--- Executing Phase 2: Live Font Tile Extraction ---" << std::endl;
     std::string bin_path = "2.00/THAI.COM";
-    uint8_t upper[8] = {0}, lower[8] = {0}, cell[16] = {0};
+    uint8_t upper[8] = {0};
+    uint8_t lower[8] = {0};
+    uint8_t cell[16] = {0};
     if (!load_raw_font_tile(bin_path, 95, upper) || !load_raw_font_tile(bin_path, 97, lower)) return;
     assemble_8x16_cell(upper, lower, cell);
     render_debug_cell(cell);
@@ -44,17 +46,27 @@ void run_bulk_export() {
 
 void process_and_render_stream(const std::vector<uint8_t>& stream) {
     std::string bin_path = "2.00/THAI.COM";
-    std::vector<VThaiScreenCell> line_buffer;
-    render_string_to_grid(stream, line_buffer);
-    render_horizontal_line(bin_path, line_buffer);
+    // Initialize a standard mini multi-line display window grid canvas: 40 columns by 4 rows
+    VThaiScreenBuffer buffer;
+    buffer.max_cols = 40;
+    buffer.max_rows = 4;
+    buffer.grid.resize(buffer.max_rows);
+
+    // Map stream data tokens across row boundary lines natively
+    process_stream_to_buffer(stream, buffer);
+
+    std::cout << "\n--- Generating Multi-Line Display Grid Canvas Preview ---" << std::endl;
+    for (uint16_t r = 0; r < buffer.max_rows; ++r) {
+        if (buffer.grid[r].empty()) continue;
+        std::cout << "\n--- Display Canvas Layout Row [" << r << "] ---" << std::endl;
+        render_horizontal_line(bin_path, buffer.grid[r]);
+    }
 }
 
 int main(int argc, char* argv[]) {
     if (argc > 1) {
         std::string flag(argv[1]);
         std::vector<uint8_t> target_stream;
-        
-        // Handle file ingestion mode parameter: -f filename.txt
         if (flag == "-f" && argc > 2) {
             std::string file_target(argv[2]);
             std::cout << "Streaming File Data Input Target: " << file_target << std::endl;
@@ -66,8 +78,6 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
         }
-        
-        // Default to inline custom hex arguments mode
         for (int i = 1; i < argc; ++i) {
             std::string arg(argv[i]);
             unsigned int byte_val;
@@ -90,7 +100,7 @@ int main(int argc, char* argv[]) {
         std::cout << "1. Run Phase 1 (Translation & State Engine Test)" << std::endl;
         std::cout << "2. Run Phase 2 (Live 8x16 Font Renderer Test)" << std::endl;
         std::cout << "3. Execute Bulk Character Font Map Export" << std::endl;
-        std::cout << "4. Run Multi-Character String Stacking Test" << std::endl;
+        std::cout << "4. Run Multi-Line Screen Buffer Test" << std::endl;
         std::cout << "5. Exit Testing Suite" << std::endl;
         std::cout << "Enter selection (1-5): ";
         if (!(std::cin >> choice)) {
@@ -102,8 +112,13 @@ int main(int argc, char* argv[]) {
         else if (choice == 2) run_phase2_test();
         else if (choice == 3) run_bulk_export();
         else if (choice == 4) {
-            std::vector<uint8_t> mock = {0xA1, 0xD4, 0xE8, 0xA2, 0xD9, 0x42};
-            process_and_render_stream(mock);
+            // Mock multi-line byte sequence embedded with explicit newline dividers (0x0A)
+            std::vector<uint8_t> multi_line_mock = {
+                0xA1, 0xD4, 0xE8, 0xA2, 0x0A, 
+                0x42, 0x42, 0x0A, 
+                0xA1, 0xD9
+            };
+            process_and_render_stream(multi_line_mock);
         }
         else if (choice == 5) break;
     }
