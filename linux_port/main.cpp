@@ -28,8 +28,16 @@ void run_phase1_test() {
 void run_phase2_test() {
     std::cout << "\n--- Executing Phase 2: Live Font Tile Extraction ---" << std::endl;
     std::cout << "Target Binary: " << global_bin_path << std::endl;
-    uint8_t upper[8] = {0}, lower[8] = {0}, cell[16] = {0};
-    if (!load_raw_font_tile(global_bin_path, 95, upper) || !load_raw_font_tile(global_bin_path, 97, lower)) return;
+    
+    // Explicit array layouts matching the function parameter expectations
+    uint8_t upper[8] = {0};
+    uint8_t lower[8] = {0};
+    uint8_t cell[16] = {0};
+    
+    if (!load_raw_font_tile(global_bin_path, 95, upper) || !load_raw_font_tile(global_bin_path, 97, lower)) {
+        std::cout << "Error loading font tiles from " << global_bin_path << std::endl;
+        return;
+    }
     assemble_8x16_cell(upper, lower, cell);
     render_debug_cell(cell);
 }
@@ -37,6 +45,8 @@ void run_phase2_test() {
 void run_bulk_export() {
     std::cout << "\n--- Executing Bulk Font Map Asset Generation ---" << std::endl;
     std::string out_path = "linux_port/full_font_set.txt";
+    
+    std::cout << "Extracting font tables directly from: " << global_bin_path << std::endl;
     if (export_full_font_set(global_bin_path, out_path)) {
         std::cout << "Success! Entire character directory dumped to: " << out_path << std::endl;
     } else {
@@ -63,17 +73,12 @@ void process_and_render_stream(const std::vector<uint8_t>& stream) {
 int main(int argc, char* argv[]) {
     std::vector<uint8_t> target_stream;
     
-    // Parse runtime command-line configurations
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
-        
-        // Handle Dynamic Version Flag: -v [path]
         if (arg == "-v" && i + 1 < argc) {
             global_bin_path = argv[++i];
             continue;
         }
-        
-        // Handle File Ingestion Flag: -f [filename]
         if (arg == "-f" && i + 1 < argc) {
             std::string file_target = argv[++i];
             std::cout << "Streaming File Data Input Target: " << file_target << std::endl;
@@ -85,8 +90,6 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
         }
-        
-        // Fallback: Treat loose arguments as hex data tokens
         unsigned int byte_val;
         std::stringstream ss;
         if (arg.substr(0, 2) == "0x" || arg.substr(0, 2) == "0X") ss << std::hex << arg.substr(2);
