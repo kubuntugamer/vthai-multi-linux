@@ -18,4 +18,8 @@ struct VThaiCursorState {
     uint8_t  last_char_type;
 };
 
+// Function prototypes to expose them to main.cpp
+ThaiLayerType classify_byte(uint8_t byte_code);
+void process_vthai_step(uint8_t byte_code, VThaiCursorState* state);
+
 #endif // VTHAI_ENGINE_H
