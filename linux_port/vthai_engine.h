@@ -19,6 +19,7 @@ struct VThaiCursorState {
 };
 
 // Function prototypes to expose them to main.cpp
+uint8_t translate_char_code(uint8_t input_byte);
 ThaiLayerType classify_byte(uint8_t byte_code);
 void process_vthai_step(uint8_t byte_code, VThaiCursorState* state);
 
