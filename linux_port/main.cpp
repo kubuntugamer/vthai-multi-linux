@@ -1,20 +1,70 @@
 #include <iostream>
+#include <vector>
+#include "vthai_engine.h"
 #include "vthai_font.h"
 
-int main() {
-    std::cout << "Starting VTHAI Phase 2 Font Reconstruction Test..." << std::endl;
+void run_phase1_test() {
+    VThaiCursorState cursor = {0, 0, LAYER_BASELINE};
+    std::vector<uint8_t> stream = {0x41, 0xA1, 0xD4, 0xE8, 0xA2};
     
-    // Sample mock 8x8 cell byte data arrays extracted from the binary maps
-    uint8_t upper_mock_tile[8] = { 0x3c, 0x42, 0x99, 0xa5, 0xa6, 0x98, 0x42, 0x3c }; // Index 127
-    uint8_t lower_mock_tile[8] = { 0x18, 0x24, 0x42, 0x42, 0x7e, 0x42, 0x42, 0x42 }; // Index 90
+    std::cout << "\n--- Executing Phase 1: State Processing Telemetry ---" << std::endl;
+    std::cout << "Initial Position: Col 0, Row 0\n" << std::endl;
     
+    for (size_t i = 0; i < stream.size(); ++i) {
+        uint8_t byte = stream[i];
+        uint16_t old_col = cursor.current_col;
+        process_vthai_step(byte, &cursor);
+        
+        std::cout << "Step [" << i << "] - Byte: 0x" << std::hex << (int)byte << std::dec
+                  << " -> Position: Col " << cursor.current_col;
+        if (cursor.current_col == old_col) {
+            std::cout << " (Cursor Frozen / Character Stacked)" << std::endl;
+        } else {
+            std::cout << " (Cursor Advanced)" << std::endl;
+        }
+    }
+    std::cout << "\nPhase 1 Complete. Traveled " << cursor.current_col << " cells." << std::endl;
+}
+
+void run_phase2_test() {
+    std::cout << "\n--- Executing Phase 2: Font Tile Reconstruction ---" << std::endl;
+    uint8_t upper_mock_tile[8] = { 0x3c, 0x42, 0x99, 0xa5, 0xa6, 0x98, 0x42, 0x3c };
+    uint8_t lower_mock_tile[8] = { 0x18, 0x24, 0x42, 0x42, 0x7e, 0x42, 0x42, 0x42 };
     uint8_t output_16_byte_cell[16] = {0};
     
-    // Assemble the two discrete halves into a cohesive 16-row layout block
     assemble_8x16_cell(upper_mock_tile, lower_mock_tile, output_16_byte_cell);
-    
-    // Render the final stitched graphic visualization matrix
     render_debug_cell(output_16_byte_cell);
-    
+    std::cout << "Phase 2 Font Matrix Assembly Complete." << std::endl;
+}
+
+int main() {
+    int choice = 0;
+    while (true) {
+        std::cout << "\n========================================" << std::endl;
+        std::cout << "  VTHAI MULTI-LINUX INTERACTIVE SUITE   " << std::endl;
+        std::cout << "========================================" << std::endl;
+        std::cout << "1. Run Phase 1 (Cursor State Engine Test)" << std::endl;
+        std::cout << "2. Run Phase 2 (8x16 Font Renderer Test)" << std::endl;
+        std::cout << "3. Exit Testing Suite" << std::endl;
+        std::cout << "Enter selection (1-3): ";
+        
+        if (!(std::cin >> choice)) {
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+            std::cout << "Invalid input. Please enter a number." << std::endl;
+            continue;
+        }
+        
+        if (choice == 1) {
+            run_phase1_test();
+        } else if (choice == 2) {
+            run_phase2_test();
+        } else if (choice == 3) {
+            std::cout << "Exiting testing suite. Goodbye!" << std::endl;
+            break;
+        } else {
+            std::cout << "Unknown selection. Please choose 1, 2, or 3." << std::endl;
+        }
+    }
     return 0;
 }
