@@ -23,9 +23,7 @@ void run_phase1_test() {
 void run_phase2_test() {
     std::cout << "\n--- Executing Phase 2: Live Font Tile Extraction ---" << std::endl;
     std::string bin_path = "2.00/THAI.COM";
-    uint8_t upper[8] = {0};
-    uint8_t lower[8] = {0};
-    uint8_t cell[16] = {0};
+    uint8_t upper[8] = {0}, lower[8] = {0}, cell[16] = {0};
     if (!load_raw_font_tile(bin_path, 95, upper) || !load_raw_font_tile(bin_path, 97, lower)) return;
     assemble_8x16_cell(upper, lower, cell);
     render_debug_cell(cell);
@@ -45,47 +43,12 @@ void run_bulk_export() {
 void run_string_stack_test() {
     std::cout << "\n--- Executing Path B: Multi-Character String Canvas Visualizer ---" << std::endl;
     std::string bin_path = "2.00/THAI.COM";
+    // Mock string sequence passing through the engine
     std::vector<uint8_t> word_stream = {0xA1, 0xD4, 0xE8, 0xA2, 0xD9, 0x42};
     std::vector<VThaiScreenCell> line_buffer;
     
     render_string_to_grid(word_stream, line_buffer);
-    
-    std::cout << "Processing Word Stream Canvas Preview (Visual Matrix Blocks):" << std::endl;
-    for (size_t col = 0; col < line_buffer.size(); ++col) {
-        const auto& cell = line_buffer[col];
-        uint8_t upper_tile[8] = {0};
-        uint8_t lower_tile[8] = {0};
-        uint8_t combined_cell[16] = {0};
-        
-        // Load the upper half and corresponding lower half tile from the interleaved file layout
-        load_raw_font_tile(bin_path, cell.baseline_code, upper_tile);
-        load_raw_font_tile(bin_path, cell.baseline_code + 1, lower_tile);
-        
-        // Correctly blend all 8 rows if an upper vowel modifier is flagged
-        if (cell.upper_vowel_code != 0) {
-            uint8_t vowel_tile[8] = {0};
-            load_raw_font_tile(bin_path, cell.upper_vowel_code, vowel_tile);
-            for(int r = 0; r < 8; ++r) upper_tile[r] |= vowel_tile[r];
-        }
-        
-        // Correctly blend all 8 rows if a tone mark modifier is flagged
-        if (cell.tone_mark_code != 0) {
-            uint8_t tone_tile[8] = {0};
-            load_raw_font_tile(bin_path, cell.tone_mark_code, tone_tile);
-            for(int r = 0; r < 8; ++r) upper_tile[r] |= tone_tile[r];
-        }
-
-        // Correctly blend all 8 rows if a lower vowel modifier is flagged
-        if (cell.lower_vowel_code != 0) {
-            uint8_t sub_tile[8] = {0};
-            load_raw_font_tile(bin_path, cell.lower_vowel_code, sub_tile);
-            for(int r = 0; r < 8; ++r) lower_tile[r] |= sub_tile[r];
-        }
-        
-        assemble_8x16_cell(upper_tile, lower_tile, combined_cell);
-        std::cout << "\n--- Grid Column [" << col << "] Visual Preview ---" << std::endl;
-        render_debug_cell(combined_cell);
-    }
+    render_horizontal_line(bin_path, line_buffer);
 }
 
 int main() {
