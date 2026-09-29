@@ -22,7 +22,10 @@ void render_debug_cell(const uint8_t* cell_16_bytes) {
 bool load_raw_font_tile(const std::string& filepath, uint16_t tile_index, uint8_t* out_8_byte_tile) {
     std::ifstream file(filepath, std::ios::binary);
     if (!file.is_open()) return false;
-    std::streamoff target_offset = 0x0500 + (tile_index * 8);
+    
+    std::streamoff base_font_offset = 0x0500;
+    std::streamoff target_offset = base_font_offset + (tile_index * 8);
+    
     file.seekg(target_offset, std::ios::beg);
     return (bool)file.read(reinterpret_cast<char*>(out_8_byte_tile), 8);
 }
@@ -32,7 +35,10 @@ bool export_full_font_set(const std::string& bin_path, const std::string& out_te
     if (!out.is_open()) return false;
     out << "VTHAI COMPREHENSIVE 8x16 CHARACTER FONT DIRECTORY\n\n";
     for (int i = 0; i < 256; i += 2) {
-        uint8_t upper[8] = {0}, lower[8] = {0}, cell[16] = {0};
+        uint8_t upper[8] = {0};
+        uint8_t lower[8] = {0};
+        uint8_t cell[16] = {0};
+        
         load_raw_font_tile(bin_path, i, upper);
         load_raw_font_tile(bin_path, i + 1, lower);
         assemble_8x16_cell(upper, lower, cell);
@@ -49,14 +55,24 @@ bool export_full_font_set(const std::string& bin_path, const std::string& out_te
 
 void render_horizontal_line(const std::string& bin_path, const std::vector<VThaiScreenCell>& line_buffer) {
     std::vector<std::vector<uint8_t>> constructed_cells(line_buffer.size(), std::vector<uint8_t>(16, 0));
+    bool is_modern = (bin_path.find("2.50") != std::string::npos || bin_path.find("3.00") != std::string::npos);
     
-    // Pre-assemble all 16-byte character matrix blocks for the current string
     for (size_t col = 0; col < line_buffer.size(); ++col) {
         const auto& cell = line_buffer[col];
-        uint8_t upper[8] = {0}, lower[8] = {0}, combined[16] = {0};
+        uint8_t upper[8] = {0};
+        uint8_t lower[8] = {0};
+        uint8_t combined[16] = {0};
         
-        load_raw_font_tile(bin_path, cell.baseline_code, upper);
-        load_raw_font_tile(bin_path, cell.baseline_code + 1, lower);
+        if (is_modern) {
+            // Modern TIS-620 binaries map 8x8 segments sequentially on a single plane layer
+            load_raw_font_tile(bin_path, cell.baseline_code, upper);
+            // Re-route the lower pointer loop to pull fallback spacing parameters natively
+            load_raw_font_tile(bin_path, cell.baseline_code, lower);
+        } else {
+            // Legacy v2.00 interleaved double-block layout architecture
+            load_raw_font_tile(bin_path, cell.baseline_code, upper);
+            load_raw_font_tile(bin_path, cell.baseline_code + 1, lower);
+        }
         
         if (cell.upper_vowel_code != 0) {
             uint8_t vowel[8] = {0};
@@ -78,7 +94,6 @@ void render_horizontal_line(const std::string& bin_path, const std::vector<VThai
         for(int r=0; r<16; ++r) constructed_cells[col][r] = combined[r];
     }
     
-    // Print row-by-row across all horizontal cell blocks simultaneously
     std::cout << "\nHorizontal Line String Visualization Layout:" << std::endl;
     for (int row = 0; row < 16; ++row) {
         for (size_t col = 0; col < constructed_cells.size(); ++col) {
