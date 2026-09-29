@@ -1,6 +1,6 @@
+#include "vthai_font.h"
 #include <iostream>
 #include <fstream>
-#include "vthai_font.h"
 
 void assemble_8x16_cell(const uint8_t* upper_tile, const uint8_t* lower_tile, uint8_t* out_16_byte_cell) {
     for (int i = 0; i < 8; ++i) {
@@ -32,14 +32,38 @@ bool load_raw_font_tile(const std::string& filepath, uint16_t tile_index, uint8_
     if (!file.is_open()) {
         return false;
     }
-    
-    // Calculate byte address offset: font arrays start exactly at 0x0500 inside the binary
     std::streamoff target_offset = 0x0500 + (tile_index * 8);
-    
     file.seekg(target_offset, std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(out_8_byte_tile), 8)) {
-        return false;
+    return (bool)file.read(reinterpret_cast<char*>(out_8_byte_tile), 8);
+}
+
+bool export_full_font_set(const std::string& bin_path, const std::string& out_text_path) {
+    std::ofstream out(out_text_path);
+    if (!out.is_open()) return false;
+
+    out << "VTHAI COMPREHENSIVE 8x16 CHARACTER FONT DIRECTORY\n";
+    out << "=================================================\n\n";
+
+    // Loop through all 256 characters, pairing adjacent 8x8 memory slots
+    for (int i = 0; i < 256; i += 2) {
+        uint8_t upper[8] = {0};
+        uint8_t lower[8] = {0};
+        uint8_t cell[16] = {0};
+
+        load_raw_font_tile(bin_path, i, upper);
+        load_raw_font_tile(bin_path, i + 1, lower);
+        assemble_8x16_cell(upper, lower, cell);
+
+        out << "Character Slot Index: " << (i / 2) << " (Upper Tile: " << i << ", Lower Tile: " << (i + 1) << ")\n";
+        out << "+--------+\n";
+        for (int row = 0; row < 16; ++row) {
+            out << "|";
+            for (int bit = 7; bit >= 0; --bit) {
+                out << (((cell[row] >> bit) & 1) ? '#' : ' ');
+            }
+            out << "|\n";
+        }
+        out << "+--------+\n\n";
     }
-    
     return true;
 }
