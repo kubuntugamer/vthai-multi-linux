@@ -50,30 +50,38 @@ void process_and_render_stream(const std::vector<uint8_t>& stream) {
 }
 
 int main(int argc, char* argv[]) {
-    // If command-line arguments are provided, process them directly and exit
     if (argc > 1) {
-        std::vector<uint8_t> custom_stream;
+        std::string flag(argv[1]);
+        std::vector<uint8_t> target_stream;
+        
+        // Handle file ingestion mode parameter: -f filename.txt
+        if (flag == "-f" && argc > 2) {
+            std::string file_target(argv[2]);
+            std::cout << "Streaming File Data Input Target: " << file_target << std::endl;
+            if (load_input_file_stream(file_target, target_stream)) {
+                process_and_render_stream(target_stream);
+                return 0;
+            } else {
+                std::cout << "Error: Could not process text document source file." << std::endl;
+                return 1;
+            }
+        }
+        
+        // Default to inline custom hex arguments mode
         for (int i = 1; i < argc; ++i) {
             std::string arg(argv[i]);
             unsigned int byte_val;
             std::stringstream ss;
-            if (arg.substr(0, 2) == "0x" || arg.substr(0, 2) == "0X") {
-                ss << std::hex << arg.substr(2);
-            } else {
-                ss << std::hex << arg;
-            }
-            if (ss >> byte_val) {
-                custom_stream.push_back(static_cast<uint8_t>(byte_val));
-            }
+            if (arg.substr(0, 2) == "0x" || arg.substr(0, 2) == "0X") ss << std::hex << arg.substr(2);
+            else ss << std::hex << arg;
+            if (ss >> byte_val) target_stream.push_back(static_cast<uint8_t>(byte_val));
         }
-        if (!custom_stream.empty()) {
-            std::cout << "Executing Custom Runtime Command-Line Stream..." << std::endl;
-            process_and_render_stream(custom_stream);
+        if (!target_stream.empty()) {
+            process_and_render_stream(target_stream);
             return 0;
         }
     }
 
-    // Fallback menu layout if invoked without continuous terminal arguments
     int choice = 0;
     while (true) {
         std::cout << "\n========================================" << std::endl;

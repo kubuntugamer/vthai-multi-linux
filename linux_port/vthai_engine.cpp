@@ -1,6 +1,6 @@
 #include "vthai_engine.h"
+#include <fstream>
 
-// Authentic VTHAI v2.00 mapping sequence extracted from file offset 0x100
 static const uint8_t translation_matrix[256] = {
     0xEA, 0xEB, 0xEC, 0xDA, 0xFC, 0xFD, 0xFE, 0xFF, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
     0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x90, 0x91, 0x92, 0x93, 0x94, 0xFF, 0x00, 0x01,
@@ -42,21 +42,29 @@ void process_vthai_step(uint8_t byte_code, VThaiCursorState* state) {
 
 void render_string_to_grid(const std::vector<uint8_t>& input_stream, std::vector<VThaiScreenCell>& line_cells) {
     int active_idx = -1;
-    
     for (uint8_t raw_byte : input_stream) {
         uint8_t internal_code = translate_char_code(raw_byte);
         ThaiLayerType layer = classify_byte(internal_code);
-        
         if (layer == LAYER_BASELINE || active_idx == -1) {
-            // Allocate a clean horizontal grid layout position cell
             VThaiScreenCell new_cell = {internal_code, 0, 0, 0, true};
             line_cells.push_back(new_cell);
             active_idx = line_cells.size() - 1;
         } else {
-            // Modify active background column layers dynamically without shifting indexing right
             if (layer == LAYER_UPPER) line_cells[active_idx].upper_vowel_code = internal_code;
             else if (layer == LAYER_TONE) line_cells[active_idx].tone_mark_code = internal_code;
             else if (layer == LAYER_LOWER) line_cells[active_idx].lower_vowel_code = internal_code;
         }
     }
+}
+
+bool load_input_file_stream(const std::string& filepath, std::vector<uint8_t>& out_stream) {
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file.is_open()) return false;
+    
+    // Read raw file buffer bytes into the storage array vector
+    char ch;
+    while (file.get(ch)) {
+        out_stream.push_back(static_cast<uint8_t>(ch));
+    }
+    return true;
 }
