@@ -5,7 +5,6 @@
 
 void run_phase1_test() {
     VThaiCursorState cursor = {0, 0, LAYER_BASELINE};
-    // Mock input data stream containing both standard ASCII and Thai language ranges
     std::vector<uint8_t> stream = {0x41, 0xA1, 0xD4, 0xE8, 0xA2};
     
     std::cout << "\n--- Executing Phase 1: State Processing & Translation Telemetry ---" << std::endl;
@@ -32,14 +31,22 @@ void run_phase1_test() {
 }
 
 void run_phase2_test() {
-    std::cout << "\n--- Executing Phase 2: Font Tile Reconstruction ---" << std::endl;
-    uint8_t upper_mock_tile[] = { 0x3c, 0x42, 0x99, 0xa5, 0xa6, 0x98, 0x42, 0x3c };
-    uint8_t lower_mock_tile[] = { 0x18, 0x24, 0x42, 0x42, 0x7e, 0x42, 0x42, 0x42 };
+    std::cout << "\n--- Executing Phase 2: Live Font Tile Extraction ---" << std::endl;
+    std::string bin_path = "2.00/THAI.COM";
+    
+    uint8_t upper_tile[8] = {0};
+    uint8_t lower_tile[8] = {0};
     uint8_t output_16_byte_cell[16] = {0};
     
-    assemble_8x16_cell(upper_mock_tile, lower_mock_tile, output_16_byte_cell);
+    // Dynamically pull genuine font blocks out of the DOS binary folder
+    if (!load_raw_font_tile(bin_path, 95, upper_tile) || !load_raw_font_tile(bin_path, 97, lower_tile)) {
+        std::cout << "Error: Failed to read font tables from " << bin_path << std::endl;
+        return;
+    }
+    
+    assemble_8x16_cell(upper_tile, lower_tile, output_16_byte_cell);
+    std::cout << "Successfully extracted Tile 95 and Tile 97 from binary." << std::endl;
     render_debug_cell(output_16_byte_cell);
-    std::cout << "Phase 2 Font Matrix Assembly Complete." << std::endl;
 }
 
 int main() {
@@ -49,7 +56,7 @@ int main() {
         std::cout << "  VTHAI MULTI-LINUX INTERACTIVE SUITE   " << std::endl;
         std::cout << "========================================" << std::endl;
         std::cout << "1. Run Phase 1 (Translation & State Engine Test)" << std::endl;
-        std::cout << "2. Run Phase 2 (8x16 Font Renderer Test)" << std::endl;
+        std::cout << "2. Run Phase 2 (Live 8x16 Font Renderer Test)" << std::endl;
         std::cout << "3. Exit Testing Suite" << std::endl;
         std::cout << "Enter selection (1-3): ";
         
