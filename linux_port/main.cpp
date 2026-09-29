@@ -5,7 +5,6 @@
 #include "vthai_engine.h"
 #include "vthai_font.h"
 
-// Track the globally active driver binary location
 std::string global_bin_path = "2.00/THAI.COM";
 
 void run_phase1_test() {
@@ -28,16 +27,10 @@ void run_phase1_test() {
 void run_phase2_test() {
     std::cout << "\n--- Executing Phase 2: Live Font Tile Extraction ---" << std::endl;
     std::cout << "Target Binary: " << global_bin_path << std::endl;
-    
-    // Explicit array layouts matching the function parameter expectations
     uint8_t upper[8] = {0};
     uint8_t lower[8] = {0};
     uint8_t cell[16] = {0};
-    
-    if (!load_raw_font_tile(global_bin_path, 95, upper) || !load_raw_font_tile(global_bin_path, 97, lower)) {
-        std::cout << "Error loading font tiles from " << global_bin_path << std::endl;
-        return;
-    }
+    if (!load_raw_font_tile(global_bin_path, 95, upper) || !load_raw_font_tile(global_bin_path, 97, lower)) return;
     assemble_8x16_cell(upper, lower, cell);
     render_debug_cell(cell);
 }
@@ -45,7 +38,6 @@ void run_phase2_test() {
 void run_bulk_export() {
     std::cout << "\n--- Executing Bulk Font Map Asset Generation ---" << std::endl;
     std::string out_path = "linux_port/full_font_set.txt";
-    
     std::cout << "Extracting font tables directly from: " << global_bin_path << std::endl;
     if (export_full_font_set(global_bin_path, out_path)) {
         std::cout << "Success! Entire character directory dumped to: " << out_path << std::endl;
@@ -77,6 +69,7 @@ int main(int argc, char* argv[]) {
         std::string arg(argv[i]);
         if (arg == "-v" && i + 1 < argc) {
             global_bin_path = argv[++i];
+            set_engine_version_mode(global_bin_path); // Alert the logic module to trigger dynamic switch
             continue;
         }
         if (arg == "-f" && i + 1 < argc) {
@@ -104,6 +97,7 @@ int main(int argc, char* argv[]) {
 
     int choice = 0;
     while (true) {
+        set_engine_version_mode(global_bin_path); // Synchronize active menu state
         std::cout << "\n========================================" << std::endl;
         std::cout << "  VTHAI MULTI-LINUX INTERACTIVE SUITE   " << std::endl;
         std::cout << "  Active Version: " << global_bin_path << std::endl;
