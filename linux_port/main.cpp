@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <string>
+#include <sstream>
 #include "vthai_engine.h"
 #include "vthai_font.h"
 
@@ -40,18 +42,38 @@ void run_bulk_export() {
     }
 }
 
-void run_string_stack_test() {
-    std::cout << "\n--- Executing Path B: Multi-Character String Canvas Visualizer ---" << std::endl;
+void process_and_render_stream(const std::vector<uint8_t>& stream) {
     std::string bin_path = "2.00/THAI.COM";
-    // Mock string sequence passing through the engine
-    std::vector<uint8_t> word_stream = {0xA1, 0xD4, 0xE8, 0xA2, 0xD9, 0x42};
     std::vector<VThaiScreenCell> line_buffer;
-    
-    render_string_to_grid(word_stream, line_buffer);
+    render_string_to_grid(stream, line_buffer);
     render_horizontal_line(bin_path, line_buffer);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    // If command-line arguments are provided, process them directly and exit
+    if (argc > 1) {
+        std::vector<uint8_t> custom_stream;
+        for (int i = 1; i < argc; ++i) {
+            std::string arg(argv[i]);
+            unsigned int byte_val;
+            std::stringstream ss;
+            if (arg.substr(0, 2) == "0x" || arg.substr(0, 2) == "0X") {
+                ss << std::hex << arg.substr(2);
+            } else {
+                ss << std::hex << arg;
+            }
+            if (ss >> byte_val) {
+                custom_stream.push_back(static_cast<uint8_t>(byte_val));
+            }
+        }
+        if (!custom_stream.empty()) {
+            std::cout << "Executing Custom Runtime Command-Line Stream..." << std::endl;
+            process_and_render_stream(custom_stream);
+            return 0;
+        }
+    }
+
+    // Fallback menu layout if invoked without continuous terminal arguments
     int choice = 0;
     while (true) {
         std::cout << "\n========================================" << std::endl;
@@ -59,8 +81,8 @@ int main() {
         std::cout << "========================================" << std::endl;
         std::cout << "1. Run Phase 1 (Translation & State Engine Test)" << std::endl;
         std::cout << "2. Run Phase 2 (Live 8x16 Font Renderer Test)" << std::endl;
-        std::cout << "3. Execute Bulk Character Font Map Export (Path A)" << std::endl;
-        std::cout << "4. Run Multi-Character String Stacking Test (Path B)" << std::endl;
+        std::cout << "3. Execute Bulk Character Font Map Export" << std::endl;
+        std::cout << "4. Run Multi-Character String Stacking Test" << std::endl;
         std::cout << "5. Exit Testing Suite" << std::endl;
         std::cout << "Enter selection (1-5): ";
         if (!(std::cin >> choice)) {
@@ -71,7 +93,10 @@ int main() {
         if (choice == 1) run_phase1_test();
         else if (choice == 2) run_phase2_test();
         else if (choice == 3) run_bulk_export();
-        else if (choice == 4) run_string_stack_test();
+        else if (choice == 4) {
+            std::vector<uint8_t> mock = {0xA1, 0xD4, 0xE8, 0xA2, 0xD9, 0x42};
+            process_and_render_stream(mock);
+        }
         else if (choice == 5) break;
     }
     return 0;
