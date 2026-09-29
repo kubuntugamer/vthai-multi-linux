@@ -1,0 +1,10 @@
+List Files
+
+VTHAI.COM       29419   2-12-93 5:14p   VTHAI.COM (Modify)
+RVT.COM           166   2-12-93 5:14p   Remove VTHAI from Memory (Junr)
+
+        Syntax : VTHAI /?    Help
+                 VTHAI       Execute Thai Driver
+                 VTHAI /d    Remove VTHAI from Memory
+
+        Ell     ST(Sup)
